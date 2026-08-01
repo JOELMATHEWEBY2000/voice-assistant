@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Voice Assistant</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+
+<div class="container">
+
+    <h1>🎙 Voice Activated Personal Assistant</h1>
+
+    <p class="subtitle">
+        Speak commands like:
+        <br>
+        Weather • News • Time • Date • Google • YouTube • Gmail • Reminder
+    </p>
+
+    <button id="voiceButton">
+        🎤 Start Listening
+    </button>
+
+    <div class="box">
+
+        <h3>Your Command</h3>
+
+        <p id="command">Waiting...</p>
+
+    </div>
+
+    <div class="box">
+
+        <h3>Assistant Response</h3>
+
+        <p id="response">Ready!</p>
+
+    </div>
+
+</div>
+
+<script>
+
+const btn = document.getElementById("voiceButton");
+
+btn.addEventListener("click", () => {
+
+    btn.disabled = true;
+
+    btn.innerHTML = "🎙 Listening...";
+
+    fetch("/voice", {
+        method: "POST"
+    })
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        document.getElementById("command").innerHTML = data.command;
+
+        document.getElementById("response").innerHTML = data.response;
+
+        btn.disabled = false;
+
+        btn.innerHTML = "🎤 Start Listening";
+
+    })
+
+    .catch(error => {
+
+        console.log(error);
+
+        document.getElementById("response").innerHTML =
+        "Error communicating with server.";
+
+        btn.disabled = false;
+
+        btn.innerHTML = "🎤 Start Listening";
+
+    });
+
+});
+
+</script>
+
+</body>
+</html>
