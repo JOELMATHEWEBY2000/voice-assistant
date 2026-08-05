@@ -221,27 +221,46 @@ def extract_city(command):
 # remind me to drink water in 5 minutes
 # --------------------------
 
+import re
+
 def parse_reminder(command):
 
-    import re
+    command = command.lower().strip()
 
     patterns = [
 
+        # Remind me to drink water in 10 minutes
         r"remind me to (.+) in (\d+) minute[s]?",
 
+        # Set reminder to study in 20 minutes
         r"set reminder to (.+) in (\d+) minute[s]?",
 
+        # Reminder to call mom in 15 minutes
         r"reminder to (.+) in (\d+) minute[s]?"
-
     ]
 
     for pattern in patterns:
 
-        match = re.search(pattern, command, re.IGNORECASE)
+        match = re.search(pattern, command)
 
         if match:
 
-            return int(match.group(2)), match.group(1)
+            message = match.group(1).strip()
+            minutes = int(match.group(2))
+
+            return minutes, message
+
+    # Support: "Set reminder for 20 minutes"
+    match = re.search(
+        r"set reminder for (\d+) minute[s]?",
+        command
+    )
+
+    if match:
+
+        minutes = int(match.group(1))
+
+        return minutes, "Reminder"
 
     return None
 
