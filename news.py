@@ -4,77 +4,43 @@ from config import NEWS_API_KEY
 BASE_URL = "https://newsapi.org/v2/top-headlines"
 
 
-def get_news(country="in", category=None, limit=5):
-    """
-    Fetch top news headlines.
-
-    Parameters:
-        country : Country code (default: India)
-        category : business, sports, technology, health, science, entertainment
-        limit : Number of headlines
-
-    Returns:
-        List of news headlines
-    """
+def get_news(country="in", limit=5):
 
     if not NEWS_API_KEY:
-        return []
+        return ["NEWS_API_KEY is missing."]
 
     params = {
         "country": country,
         "apiKey": NEWS_API_KEY
     }
 
-    if category:
-        params["category"] = category
-
     try:
 
         response = requests.get(BASE_URL, params=params, timeout=10)
 
-        response.raise_for_status()
-
         data = response.json()
 
+        print(data)      # View this in the Render logs
+
+        if response.status_code != 200:
+
+            return [
+                data.get("message", "Unable to fetch news.")
+            ]
+
         articles = data.get("articles", [])
+
+        if not articles:
+            return ["No news articles found."]
 
         headlines = []
 
         for article in articles[:limit]:
 
-            title = article.get("title")
-
-            source = article.get("source", {}).get("name", "Unknown")
-
-            headlines.append(f"{title} (Source: {source})")
+            headlines.append(article.get("title"))
 
         return headlines
 
-    except requests.exceptions.ConnectionError:
+    except Exception as e:
 
-        return []
-
-    except requests.exceptions.Timeout:
-
-        return []
-
-    except Exception:
-
-        return []
-
-
-if __name__ == "__main__":
-
-    news = get_news()
-
-    if len(news) == 0:
-
-        print("No news available.")
-
-    else:
-
-        print("\nToday's Headlines\n")
-
-        for i, headline in enumerate(news, start=1):
-
-            print(f"{i}. {headline}")
+        return [str(e)]
