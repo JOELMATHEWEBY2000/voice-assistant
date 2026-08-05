@@ -100,33 +100,20 @@ if (!SpeechRecognition) {
         .then(response => response.json())
 
         .then(data => {
-
-            // Open website commands
-            if (typeof data.response === "object") {
-
-                if (data.response.action === "open") {
-
-                    window.open(data.response.url, "_blank");
-
-                    responseBox.innerHTML =
-                        "Opening website...";
-
-                    return;
-                }
-
+            if (typeof data.response === "object" &&
+            data.response.action === "open_url") {
+                responseBox.innerHTML = data.response.message;
+                speechSynthesis.speak(
+                    new SpeechSynthesisUtterance(data.response.message)
+                );
+                window.open(data.response.url, "_blank");
+                return;
             }
-
+            
             responseBox.innerHTML = data.response;
-
-            // Browser Text-To-Speech
-
-            const speech =
-                new SpeechSynthesisUtterance(data.response);
-
-            speech.lang = "en-US";
-
-            speechSynthesis.speak(speech);
-
+            speechSynthesis.speak(
+                new SpeechSynthesisUtterance(data.response)
+            );
         })
 
         .catch(error => {
