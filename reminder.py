@@ -110,3 +110,20 @@ def check_reminders(speak):
             save_reminders(reminders)
 
         time.sleep(30)
+
+def remove_reminder(index):
+
+    reminders = load_reminders()
+
+    pending = [r for r in reminders if not r["completed"]]
+
+    if index < 1 or index > len(pending):
+        return False
+
+    reminder_to_remove = pending[index - 1]
+
+    reminders.remove(reminder_to_remove)
+
+    save_reminders(reminders)
+
+    return True
