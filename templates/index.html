@@ -1,17 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Voice Assistant</title>
+    <title>Voice Activated Personal Assistant</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
-
 </head>
+
 <body>
 
 <div class="container">
@@ -21,7 +19,7 @@
     <p class="subtitle">
         Speak commands like:
         <br>
-        Weather • News • Time • Date • Google • YouTube • Gmail • Reminder
+        Weather in Kochi • News • Time • Date • Open Google • Open YouTube • Open Gmail • Show Reminders
     </p>
 
     <button id="voiceButton">
@@ -29,19 +27,13 @@
     </button>
 
     <div class="box">
-
         <h3>Your Command</h3>
-
         <p id="command">Waiting...</p>
-
     </div>
 
     <div class="box">
-
         <h3>Assistant Response</h3>
-
         <p id="response">Ready!</p>
-
     </div>
 
 </div>
@@ -49,45 +41,133 @@
 <script>
 
 const btn = document.getElementById("voiceButton");
+const commandBox = document.getElementById("command");
+const responseBox = document.getElementById("response");
 
-btn.addEventListener("click", () => {
+// Browser Speech Recognition
+
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+
+    responseBox.innerHTML =
+        "Your browser does not support Speech Recognition.";
 
     btn.disabled = true;
 
-    btn.innerHTML = "🎙 Listening...";
+} else {
 
-    fetch("/voice", {
-        method: "POST"
-    })
+    const recognition = new SpeechRecognition();
 
-    .then(response => response.json())
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-    .then(data => {
+    btn.addEventListener("click", () => {
 
-        document.getElementById("command").innerHTML = data.command;
+        btn.disabled = true;
+        btn.innerHTML = "🎙 Listening...";
 
-        document.getElementById("response").innerHTML = data.response;
+        responseBox.innerHTML = "Listening...";
 
-        btn.disabled = false;
-
-        btn.innerHTML = "🎤 Start Listening";
-
-    })
-
-    .catch(error => {
-
-        console.log(error);
-
-        document.getElementById("response").innerHTML =
-        "Error communicating with server.";
-
-        btn.disabled = false;
-
-        btn.innerHTML = "🎤 Start Listening";
+        recognition.start();
 
     });
 
-});
+    recognition.onresult = function(event) {
+
+        const command = event.results[0][0].transcript;
+
+        commandBox.innerHTML = command;
+
+        responseBox.innerHTML = "Processing...";
+
+        fetch("/command", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                command: command
+            })
+
+        })
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            // Open website commands
+            if (typeof data.response === "object") {
+
+                if (data.response.action === "open") {
+
+                    window.open(data.response.url, "_blank");
+
+                    responseBox.innerHTML =
+                        "Opening website...";
+
+                    return;
+                }
+
+            }
+
+            responseBox.innerHTML = data.response;
+
+            // Browser Text-To-Speech
+
+            const speech =
+                new SpeechSynthesisUtterance(data.response);
+
+            speech.lang = "en-US";
+
+            speechSynthesis.speak(speech);
+
+        })
+
+        .catch(error => {
+
+            console.error(error);
+
+            responseBox.innerHTML =
+                "Unable to communicate with the server.";
+
+        })
+
+        .finally(() => {
+
+            btn.disabled = false;
+
+            btn.innerHTML = "🎤 Start Listening";
+
+        });
+
+    };
+
+    recognition.onerror = function(event) {
+
+        responseBox.innerHTML =
+            "Speech Recognition Error: " + event.error;
+
+        btn.disabled = false;
+
+        btn.innerHTML = "🎤 Start Listening";
+
+    };
+
+    recognition.onend = function() {
+
+        btn.disabled = false;
+
+        btn.innerHTML = "🎤 Start Listening";
+
+    };
+
+}
 
 </script>
 
