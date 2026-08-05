@@ -138,7 +138,7 @@ def process_command(command):
 
         if result is None:
             return (
-                "Example: Remind me to drink water in 10 minutes."
+                "No Reminder"
             )
 
         minutes, message = result
@@ -147,15 +147,21 @@ def process_command(command):
 
         return f"Reminder set for {minutes} minutes."
 
+    # ---------------- Add Reminder ----------------
+    elif "remind me" in command or "set reminder" in command:
+        result = parse_reminder(command)
+        if result is None:
+            return "Example: Remind me to drink water in 10 minutes."
+        minutes, message = result
+        add_reminder(minutes, message)
+        return f"Reminder set for {minutes} minutes."
+
     # ---------------- Show Reminders ----------------
 
-    elif "show reminders" in command:
-
+    elif "show reminders" in command or "list reminders" in command:
         reminders = get_reminders()
-
-        if len(reminders) == 0:
-            return "No reminders."
-
+        if not reminders:
+            return "No reminders found."
         return "\n".join(reminders)
 
     # ---------------- Delete Reminder ----------------
@@ -217,25 +223,25 @@ def extract_city(command):
 
 def parse_reminder(command):
 
-    match = re.search(
-        r"remind me to (.+) in (\d+) minute",
-        command
-    )
+    import re
 
-    if not match:
+    patterns = [
 
-        match = re.search(
-            r"remind me to (.+) in (\d+) minutes",
-            command
-        )
+        r"remind me to (.+) in (\d+) minute[s]?",
 
-    if match:
+        r"set reminder to (.+) in (\d+) minute[s]?",
 
-        message = match.group(1)
+        r"reminder to (.+) in (\d+) minute[s]?"
 
-        minutes = int(match.group(2))
+    ]
 
-        return minutes, message
+    for pattern in patterns:
+
+        match = re.search(pattern, command, re.IGNORECASE)
+
+        if match:
+
+            return int(match.group(2)), match.group(1)
 
     return None
 
