@@ -104,8 +104,9 @@ def process_command(command):
     elif "google" in command:
 
         return {
-        "action": "open_url",
-        "url": "https://www.google.com"
+            "message": "Opening Google",
+            "action": "open_url",
+            "url": "https://www.google.com"
     }
 
     # ---------------- YouTube ----------------
