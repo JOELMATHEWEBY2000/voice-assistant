@@ -9,7 +9,8 @@ from reminder import (
 )
 from config import validate_keys
 
-import datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import re
 
 app = Flask(__name__)
@@ -87,18 +88,18 @@ def process_command(command):
     # ---------------- Time ----------------
 
     elif "time" in command:
-
-        return datetime.datetime.now().strftime(
-            "Current time is %I:%M %p"
-        )
+        current_time = datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    ).strftime("%I:%M %p")
+        return f"Current time is {current_time}"
 
     # ---------------- Date ----------------
 
     elif "date" in command:
-
-        return datetime.datetime.now().strftime(
-            "Today is %d %B %Y"
-        )
+        today = datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    ).strftime("%d %B %Y")
+        return f"Today is {today}"
 
     # ---------------- Google ----------------
 
@@ -285,6 +286,11 @@ def check_due():
     return jsonify({
         "reminders": reminders
     })
+
+@app.route("/debug-reminders")
+def debug_reminders():
+    from reminder import load_reminders
+    return jsonify(load_reminders())
 
 
 # --------------------------

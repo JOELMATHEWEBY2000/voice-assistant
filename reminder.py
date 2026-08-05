@@ -47,23 +47,23 @@ def save_reminders(reminders):
 
 
 def add_reminder(minutes, message):
-    """
-    Add a reminder after specified minutes.
-    """
 
     reminders = load_reminders()
 
-    reminder_time = datetime.now() + timedelta(minutes=minutes)
-
     reminder = {
         "message": message,
-        "time": reminder_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "time": (
+            datetime.now() +
+            timedelta(minutes=minutes)
+        ).strftime("%Y-%m-%d %H:%M:%S"),
         "completed": False
     }
 
     reminders.append(reminder)
 
     save_reminders(reminders)
+
+    print("Reminder saved:", reminder)
 
 
 def get_reminders():
