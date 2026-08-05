@@ -113,13 +113,21 @@ def process_command(command):
 
     elif "youtube" in command:
 
-        return "OPEN_YOUTUBE"
+            return {
+                "message": "Opening YouTube",
+                "action": "open_url",
+                "url": "https://www.youtube.com"
+    }
 
     # ---------------- Gmail ----------------
 
     elif "gmail" in command:
 
-        return "OPEN_GMAIL"
+            return {
+                "message": "Opening Gmail",
+                "action": "open_url",
+                "url": "https://mail.google.com"
+    }
 
     # ---------------- Reminder ----------------
 
