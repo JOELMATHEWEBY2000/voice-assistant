@@ -1,68 +1,49 @@
 import requests
 from config import WEATHER_API_KEY
 
-
-BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
-
-
 def get_weather(city):
-    """
-    Fetch current weather for the given city.
-    """
 
-    if not WEATHER_API_KEY:
-        return "Weather API key is missing."
+    # Step 1: Get coordinates
+    geo_url = "https://api.openweathermap.org/geo/1.0/direct"
 
-    params = {
+    geo_params = {
         "q": city,
+        "limit": 1,
+        "appid": WEATHER_API_KEY
+    }
+
+    geo_response = requests.get(geo_url, params=geo_params)
+    geo_data = geo_response.json()
+
+    if not geo_data:
+        return "City not found."
+
+    lat = geo_data[0]["lat"]
+    lon = geo_data[0]["lon"]
+
+    # Step 2: Get weather using coordinates
+    weather_url = "https://api.openweathermap.org/data/2.5/weather"
+
+    weather_params = {
+        "lat": lat,
+        "lon": lon,
         "appid": WEATHER_API_KEY,
         "units": "metric"
     }
 
-    try:
+    weather_response = requests.get(weather_url, params=weather_params)
+    data = weather_response.json()
 
-        response = requests.get(BASE_URL, params=params, timeout=10)
+    temp = data["main"]["temp"]
+    humidity = data["main"]["humidity"]
+    condition = data["weather"][0]["description"]
 
-        response.raise_for_status()
+    return f"""
+Weather in {data['name']}
 
-        data = response.json()
+Temperature : {temp} °C
 
-        temperature = data["main"]["temp"]
-        feels_like = data["main"]["feels_like"]
-        humidity = data["main"]["humidity"]
-        description = data["weather"][0]["description"].title()
-        wind_speed = data["wind"]["speed"]
+Humidity : {humidity} %
 
-        message = (
-            f"Current weather in {city.title()}.\n"
-            f"Temperature: {temperature}°C\n"
-            f"Feels Like: {feels_like}°C\n"
-            f"Condition: {description}\n"
-            f"Humidity: {humidity}%\n"
-            f"Wind Speed: {wind_speed} meter per second."
-        )
-
-        return message
-
-    except requests.exceptions.HTTPError:
-
-        return "City not found."
-
-    except requests.exceptions.ConnectionError:
-
-        return "Unable to connect to the weather service."
-
-    except requests.exceptions.Timeout:
-
-        return "Weather request timed out."
-
-    except Exception:
-
-        return "Unable to fetch weather information."
-
-
-if __name__ == "__main__":
-
-    city = input("Enter City: ")
-
-    print(get_weather(city))
+Condition : {condition.title()}
+"""

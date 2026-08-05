@@ -68,7 +68,7 @@ def process_command(command):
         city = extract_city(command)
 
         if city == "":
-            return "Please say the city name. Example: What is the weather in Kochi?"
+            return "Please say the city name. Example: What is the weather today?"
 
         return get_weather(city)
 
