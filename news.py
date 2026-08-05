@@ -1,46 +1,78 @@
 import requests
-from config import NEWS_API_KEY
+from config import GNEWS_API_KEY
 
-BASE_URL = "https://newsapi.org/v2/top-headlines"
+BASE_URL = "https://gnews.io/api/v4/top-headlines"
 
 
-def get_news(country="in", limit=5):
+def get_news(country="in", category="general", limit=5):
 
-    if not NEWS_API_KEY:
-        return ["NEWS_API_KEY is missing."]
+    if not GNEWS_API_KEY:
+        return ["GNews API key is missing."]
 
     params = {
         "country": country,
-        "apiKey": NEWS_API_KEY
+        "category": category,
+        "lang": "en",
+        "max": limit,
+        "apikey": GNEWS_API_KEY
     }
 
     try:
 
-        response = requests.get(BASE_URL, params=params, timeout=10)
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            timeout=10
+        )
 
         data = response.json()
 
-        print(data)      # View this in the Render logs
+        print(data)
 
         if response.status_code != 200:
 
             return [
-                data.get("message", "Unable to fetch news.")
+                data.get("errors", ["Unable to fetch news"])[0]
             ]
 
         articles = data.get("articles", [])
 
         if not articles:
-            return ["No news articles found."]
+            return ["No news available."]
 
         headlines = []
 
-        for article in articles[:limit]:
+        for article in articles:
 
-            headlines.append(article.get("title"))
+            title = article.get("title", "No Title")
+
+            source = article.get("source", {}).get("name", "")
+
+            headlines.append(
+                f"{title} ({source})"
+            )
 
         return headlines
+
+    except requests.exceptions.Timeout:
+
+        return ["Request timed out."]
+
+    except requests.exceptions.ConnectionError:
+
+        return ["Unable to connect to GNews API."]
 
     except Exception as e:
 
         return [str(e)]
+
+
+if __name__ == "__main__":
+
+    news = get_news()
+
+    print("\nToday's News\n")
+
+    for i, headline in enumerate(news, 1):
+
+        print(i, headline)
