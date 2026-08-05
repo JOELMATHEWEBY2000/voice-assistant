@@ -19,7 +19,7 @@
     <p class="subtitle">
         Speak commands like:
         <br>
-        Weather in Kochi • News • Time • Date • Open Google • Open YouTube • Open Gmail • Show Reminders
+        Weather • News • Time • Date • Open Google • Open YouTube • Open Gmail • Show Reminders
     </p>
 
     <button id="voiceButton">
@@ -153,6 +153,32 @@ if (!SpeechRecognition) {
         btn.innerHTML = "🎤 Start Listening";
 
     };
+
+    setInterval(() => {
+
+    fetch("/check-reminders")
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        if(data.reminders.length > 0){
+
+            data.reminders.forEach(reminder =>{
+
+                alert(reminder);
+
+                speechSynthesis.speak(
+                    new SpeechSynthesisUtterance(reminder)
+                );
+
+            });
+
+        }
+
+    });
+
+},30000);
 
 }
 

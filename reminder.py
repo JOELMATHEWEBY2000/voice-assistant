@@ -20,16 +20,28 @@ initialize_file()
 
 def load_reminders():
     """
-    Load reminders from JSON file.
+    Load reminders safely.
     """
-    with open(REMINDER_FILE, "r") as file:
-        return json.load(file)
+
+    if not os.path.exists(REMINDER_FILE):
+        return []
+
+    try:
+        with open(REMINDER_FILE, "r") as file:
+
+            content = file.read().strip()
+
+            if not content:
+                return []
+
+            return json.loads(content)
+
+    except (json.JSONDecodeError, FileNotFoundError):
+        return []
 
 
 def save_reminders(reminders):
-    """
-    Save reminders to JSON file.
-    """
+
     with open(REMINDER_FILE, "w") as file:
         json.dump(reminders, file, indent=4)
 
@@ -55,61 +67,58 @@ def add_reminder(minutes, message):
 
 
 def get_reminders():
-    """
-    Return all pending reminders.
-    """
 
     reminders = load_reminders()
 
-    pending = []
+    if not reminders:
+        return []
+
+    result = []
+
+    for i, reminder in enumerate(reminders, start=1):
+
+        status = "Completed" if reminder["completed"] else "Pending"
+
+        result.append(
+            f"{i}. {reminder['message']} - {reminder['time']} ({status})"
+        )
+
+    return result
+
+def due_reminders():
+
+    reminders = load_reminders()
+
+    now = datetime.now()
+
+    due = []
+
+    changed = False
 
     for reminder in reminders:
 
-        if not reminder["completed"]:
-            pending.append(
-                f'{reminder["time"]} : {reminder["message"]}'
-            )
+        if reminder["completed"]:
+            continue
 
-    return pending
+        reminder_time = datetime.strptime(
+            reminder["time"],
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        if now >= reminder_time:
+
+            due.append(reminder["message"])
+
+            reminder["completed"] = True
+
+            changed = True
+
+    if changed:
+        save_reminders(reminders)
+
+    return due
 
 
-def check_reminders(speak):
-    """
-    Continuously check reminders and announce them.
-    """
-
-    while True:
-
-        reminders = load_reminders()
-
-        updated = False
-
-        current_time = datetime.now()
-
-        for reminder in reminders:
-
-            if reminder["completed"]:
-                continue
-
-            reminder_time = datetime.strptime(
-                reminder["time"],
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            if current_time >= reminder_time:
-
-                speak("Reminder")
-
-                speak(reminder["message"])
-
-                reminder["completed"] = True
-
-                updated = True
-
-        if updated:
-            save_reminders(reminders)
-
-        time.sleep(30)
 
 def remove_reminder(index):
 

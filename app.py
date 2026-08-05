@@ -5,6 +5,7 @@ from reminder import (
     add_reminder,
     get_reminders,
     remove_reminder,
+    due_reminders,
 )
 from config import validate_keys
 
@@ -131,7 +132,7 @@ def process_command(command):
 
     # ---------------- Reminder ----------------
 
-    elif "remind" in command:
+    elif "remind" in command or "reminder" in command:
 
         result = parse_reminder(command)
 
@@ -248,6 +249,16 @@ def health():
 
     return jsonify({
         "status": "running"
+    })
+
+
+@app.route("/check-reminders")
+def check_due():
+
+    reminders = due_reminders()
+
+    return jsonify({
+        "reminders": reminders
     })
 
 
