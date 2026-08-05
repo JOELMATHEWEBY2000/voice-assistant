@@ -151,7 +151,7 @@ def process_command(command):
     elif "remind me" in command or "set reminder" in command:
         result = parse_reminder(command)
         if result is None:
-            return "Example: Remind me to drink water in 10 minutes."
+            return "No Reminder"
         minutes, message = result
         add_reminder(minutes, message)
         return f"Reminder set for {minutes} minutes."
