@@ -1,65 +1,79 @@
 from flask import Flask, render_template, request, jsonify
-from assistant import speak, listen
 from weather import get_weather
 from news import get_news
 from reminder import (
     add_reminder,
     get_reminders,
-    check_reminders
+    remove_reminder,
 )
 from config import validate_keys
+
 import datetime
-import webbrowser
-import threading
+import re
 
 app = Flask(__name__)
 
+
+# --------------------------
+# Home Page
+# --------------------------
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-@app.route("/voice", methods=["POST"])
-def voice():
+# --------------------------
+# Main Command API
+# --------------------------
 
-    command = listen()
+@app.route("/command", methods=["POST"])
+def command():
 
-    if not command:
+    data = request.get_json()
+
+    if not data:
         return jsonify({
-            "command": "",
-            "response": "Sorry, I couldn't understand."
+            "success": False,
+            "response": "No command received."
+        }), 400
+
+    text = data.get("command", "").lower().strip()
+
+    if text == "":
+        return jsonify({
+            "success": False,
+            "response": "Empty command."
         })
 
-    response = process_command(command)
+    response = process_command(text)
 
     return jsonify({
-        "command": command,
+        "success": True,
+        "command": text,
         "response": response
     })
 
 
+# --------------------------
+# Process Commands
+# --------------------------
+
 def process_command(command):
 
-    command = command.lower()
+    # ---------------- Weather ----------------
 
-    # Weather
     if "weather" in command:
 
-        speak("Please tell me the city name.")
+        city = extract_city(command)
 
-        city = listen()
+        if city == "":
+            return "Please say the city name. Example: What is the weather in Kochi?"
 
-        if not city:
-            return "City not recognized."
+        return get_weather(city)
 
-        result = get_weather(city)
+    # ---------------- News ----------------
 
-        speak(result)
-
-        return result
-
-    # News
     elif "news" in command:
 
         headlines = get_news()
@@ -67,94 +81,61 @@ def process_command(command):
         if len(headlines) == 0:
             return "Unable to fetch news."
 
-        speak("Today's top headlines are")
-
-        for news in headlines:
-            speak(news)
-
         return "\n".join(headlines)
 
-    # Time
+    # ---------------- Time ----------------
+
     elif "time" in command:
 
-        current = datetime.datetime.now().strftime("%I:%M %p")
+        return datetime.datetime.now().strftime(
+            "Current time is %I:%M %p"
+        )
 
-        text = f"The current time is {current}"
+    # ---------------- Date ----------------
 
-        speak(text)
-
-        return text
-
-    # Date
     elif "date" in command:
 
-        today = datetime.datetime.now().strftime("%d %B %Y")
+        return datetime.datetime.now().strftime(
+            "Today is %d %B %Y"
+        )
 
-        text = f"Today is {today}"
+    # ---------------- Google ----------------
 
-        speak(text)
-
-        return text
-
-    # Google
     elif "google" in command:
 
-        webbrowser.open("https://www.google.com")
+        return "OPEN_GOOGLE"
 
-        speak("Opening Google")
+    # ---------------- YouTube ----------------
 
-        return "Opening Google"
-
-    # YouTube
     elif "youtube" in command:
 
-        webbrowser.open("https://www.youtube.com")
+        return "OPEN_YOUTUBE"
 
-        speak("Opening YouTube")
+    # ---------------- Gmail ----------------
 
-        return "Opening YouTube"
-
-    # Gmail
     elif "gmail" in command:
 
-        webbrowser.open("https://mail.google.com")
+        return "OPEN_GMAIL"
 
-        speak("Opening Gmail")
+    # ---------------- Reminder ----------------
 
-        return "Opening Gmail"
+    elif "remind" in command:
 
-    # Reminder
-    elif "reminder" in command:
+        result = parse_reminder(command)
 
-        speak("How many minutes?")
+        if result is None:
+            return (
+                "Example: Remind me to drink water in 10 minutes."
+            )
 
-        minutes = listen()
+        minutes, message = result
 
-        try:
+        add_reminder(minutes, message)
 
-            minutes = int(minutes)
+        return f"Reminder set for {minutes} minutes."
 
-        except:
+    # ---------------- Show Reminders ----------------
 
-            return "Invalid number."
-
-        speak("What should I remind you?")
-
-        message = listen()
-
-        if not message:
-            return "Reminder message not recognized."
-
-        threading.Thread(
-            target=add_reminder,
-            args=(minutes, message)
-        ).start()
-
-        speak("Reminder has been added.")
-
-        return "Reminder has been set."
-
-    # Show reminders
     elif "show reminders" in command:
 
         reminders = get_reminders()
@@ -162,35 +143,112 @@ def process_command(command):
         if len(reminders) == 0:
             return "No reminders."
 
-        text = "\n".join(reminders)
+        return "\n".join(reminders)
 
-        speak("Here are your reminders")
+    # ---------------- Delete Reminder ----------------
 
-        return text
+    elif "delete reminder" in command:
 
-    # Exit
-    elif "exit" in command or "quit" in command:
+        number = re.findall(r"\d+", command)
 
-        speak("Goodbye")
+        if len(number) == 0:
+            return "Please specify reminder number."
 
-        return "Goodbye"
+        success = remove_reminder(int(number[0]))
+
+        if success:
+            return "Reminder deleted."
+
+        return "Reminder not found."
+
+    # ---------------- Greeting ----------------
+
+    elif "hello" in command or "hi" in command:
+
+        return "Hello! How can I help you today?"
+
+    # ---------------- Exit ----------------
+
+    elif "bye" in command or "exit" in command:
+
+        return "Goodbye! Have a nice day."
+
+    # ---------------- Unknown ----------------
 
     else:
 
-        speak("Sorry, I don't know that command.")
+        return (
+            "Sorry, I don't understand that command."
+        )
 
-        return "Unknown command."
 
+# --------------------------
+# Extract City
+# --------------------------
+
+def extract_city(command):
+
+    match = re.search(r"weather in (.+)", command)
+
+    if match:
+        return match.group(1).strip()
+
+    return ""
+
+
+# --------------------------
+# Parse Reminder
+# Example:
+# remind me to drink water in 5 minutes
+# --------------------------
+
+def parse_reminder(command):
+
+    match = re.search(
+        r"remind me to (.+) in (\d+) minute",
+        command
+    )
+
+    if not match:
+
+        match = re.search(
+            r"remind me to (.+) in (\d+) minutes",
+            command
+        )
+
+    if match:
+
+        message = match.group(1)
+
+        minutes = int(match.group(2))
+
+        return minutes, message
+
+    return None
+
+
+# --------------------------
+# Health Check
+# --------------------------
+
+@app.route("/health")
+def health():
+
+    return jsonify({
+        "status": "running"
+    })
+
+
+# --------------------------
+# Application Entry
+# --------------------------
 
 if __name__ == "__main__":
-    speak("Welcome. I am your Voice Assistant.")
 
     validate_keys()
 
-    threading.Thread(
-    target=check_reminders,
-    args=(speak,),
-    daemon=True
-).start()
-    
-    app.run(host="0.0.0.0", port=5000)
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
