@@ -1,99 +1,63 @@
-import json
-import os
-import time
-from datetime import datetime, timedelta
-from database import reminders
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from bson.objectid import ObjectId
-
-REMINDER_FILE = "reminders.json"
-
-
-def initialize_file():
-    """
-    Create reminders.json if it doesn't exist.
-    """
-    if not os.path.exists(REMINDER_FILE):
-        with open(REMINDER_FILE, "w") as file:
-            json.dump([], file, indent=4)
+from database import reminders
 
 
-initialize_file()
-
-
-def load_reminders():
-    """
-    Load reminders safely.
-    """
-
-    if not os.path.exists(REMINDER_FILE):
-        return []
-
-    try:
-        with open(REMINDER_FILE, "r") as file:
-
-            content = file.read().strip()
-
-            if not content:
-                return []
-
-            return json.loads(content)
-
-    except (json.JSONDecodeError, FileNotFoundError):
-        return []
-
-
-def save_reminders(reminders):
-
-    with open(REMINDER_FILE, "w") as file:
-        json.dump(reminders, file, indent=4)
-
+# --------------------------
+# Add Reminder
+# --------------------------
 
 def add_reminder(minutes, message):
 
-    reminder_time = datetime.now() + timedelta(minutes=minutes)
+    reminder_time = (
+        datetime.now(timezone.utc)
+        + timedelta(minutes=minutes)
+    )
 
     reminders.insert_one({
-
         "message": message,
-
         "time": reminder_time,
-
         "completed": False
-
     })
 
 
+# --------------------------
+# Get Pending Reminders
+# --------------------------
 
 def get_reminders():
 
     data = reminders.find({
-
         "completed": False
-
-    }).sort("time")
+    }).sort("time", 1)
 
     result = []
 
     for reminder in data:
 
+        ist_time = reminder["time"].astimezone(
+            ZoneInfo("Asia/Kolkata")
+        )
+
         result.append(
-
-            f'{reminder["message"]} - {reminder["time"].strftime("%d-%m-%Y %H:%M")}'
-
+            f'{reminder["message"]} - {ist_time.strftime("%d-%m-%Y %I:%M %p")}'
         )
 
     return result
 
+
+# --------------------------
+# Check Due Reminders
+# --------------------------
+
 def due_reminders():
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     data = reminders.find({
-
         "completed": False,
-
         "time": {"$lte": now}
-
     })
 
     due = []
@@ -103,22 +67,26 @@ def due_reminders():
         due.append(reminder["message"])
 
         reminders.update_one(
-
             {"_id": reminder["_id"]},
-
             {"$set": {"completed": True}}
-
         )
 
     return due
 
 
+# --------------------------
+# Remove Reminder
+# --------------------------
+
 def remove_reminder(reminder_id):
 
-    result = reminders.delete_one({
+    try:
 
-        "_id": ObjectId(reminder_id)
+        result = reminders.delete_one({
+            "_id": ObjectId(reminder_id)
+        })
 
-    })
+        return result.deleted_count > 0
 
-    return result.deleted_count > 0
+    except Exception:
+        return False
