@@ -152,14 +152,14 @@ def process_command(command):
 
 
 # ---------------- Delete Reminder ----------------
-
+    
     elif "delete reminder" in command:
         number = re.findall(r"\d+", command)
         if not number:
-            return "Please specify reminder number."
-        success = remove_reminder(number[0])
+            return "Please say the reminder number."
+        success = remove_reminder(int(number[0]))
         if success:
-            return "Reminder deleted."
+            return f"Reminder {number[0]} deleted."
         return "Reminder not found."
 
     # ---------------- Greeting ----------------

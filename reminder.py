@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from bson.objectid import ObjectId
 from database import reminders
+from zoneinfo import ZoneInfo
 
 
 # --------------------------
@@ -34,14 +35,15 @@ def get_reminders():
 
     result = []
 
-    for reminder in data:
+    for i, reminder in enumerate(data, start=1):
 
         ist_time = reminder["time"].astimezone(
             ZoneInfo("Asia/Kolkata")
         )
 
         result.append(
-            f'{reminder["message"]} - {ist_time.strftime("%d-%m-%Y %I:%M %p")}'
+            f"{i}. {reminder['message']} - "
+            f"{ist_time.strftime('%d-%m-%Y %I:%M %p')}"
         )
 
     return result
@@ -78,15 +80,21 @@ def due_reminders():
 # Remove Reminder
 # --------------------------
 
-def remove_reminder(reminder_id):
+def remove_reminder(index):
 
-    try:
+    data = list(
+        reminders.find({
+            "completed": False
+        }).sort("time", 1)
+    )
 
-        result = reminders.delete_one({
-            "_id": ObjectId(reminder_id)
-        })
-
-        return result.deleted_count > 0
-
-    except Exception:
+    if index < 1 or index > len(data):
         return False
+
+    reminder = data[index - 1]
+
+    result = reminders.delete_one({
+        "_id": reminder["_id"]
+    })
+
+    return result.deleted_count > 0
