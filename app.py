@@ -131,54 +131,35 @@ def process_command(command):
                 "url": "https://mail.google.com"
     }
 
-    # ---------------- Reminder ----------------
+# ---------------- Show Reminders ----------------
+    elif "show reminders" in command or "list reminders" in command:
+        reminder_list = get_reminders()
+        print("MongoDB Reminders:", reminder_list)
+        if not reminder_list:
+            return "No reminders found."
+        return "\n".join(reminder_list)
 
-    elif "remind" in command or "reminder" in command:
 
-        result = parse_reminder(command)
+# ---------------- Add Reminder ----------------
 
-        if result is None:
-            return (
-                "No Reminder"
-            )
-
-        minutes, message = result
-
-        add_reminder(minutes, message)
-
-        return f"Reminder set for {minutes} minutes."
-
-    # ---------------- Add Reminder ----------------
     elif "remind me" in command or "set reminder" in command:
         result = parse_reminder(command)
         if result is None:
-            return "No Reminder"
+            return "Example: Remind me to study in 10 minutes."
         minutes, message = result
         add_reminder(minutes, message)
         return f"Reminder set for {minutes} minutes."
 
-    # ---------------- Show Reminders ----------------
 
-    elif "show reminders" in command or "list reminders" in command:
-        reminders = get_reminders()
-        if not reminders:
-            return "No reminders found."
-        return "\n".join(reminders)
-
-    # ---------------- Delete Reminder ----------------
+# ---------------- Delete Reminder ----------------
 
     elif "delete reminder" in command:
-
         number = re.findall(r"\d+", command)
-
-        if len(number) == 0:
+        if not number:
             return "Please specify reminder number."
-
-        success = remove_reminder(int(number[0]))
-
+        success = remove_reminder(number[0])
         if success:
             return "Reminder deleted."
-
         return "Reminder not found."
 
     # ---------------- Greeting ----------------
