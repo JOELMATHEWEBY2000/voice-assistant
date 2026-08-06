@@ -7,6 +7,7 @@ load_dotenv()
 # API Keys
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 GNEWS_API_KEY = os.getenv("GNEWS_API_KEY")
+MONGO_URI = os.getenv("MONGO_URI")
 
 
 def validate_keys():
@@ -20,6 +21,9 @@ def validate_keys():
 
     if not GNEWS_API_KEY:
         missing.append("GNEWS_API_KEY")
+
+    if not MONGO_URI:
+        missing.append("MONGO_URI")
 
     if missing:
         print("\n========== WARNING ==========")

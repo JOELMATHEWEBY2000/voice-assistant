@@ -2,6 +2,8 @@ import json
 import os
 import time
 from datetime import datetime, timedelta
+from database import reminders
+from bson.objectid import ObjectId
 
 REMINDER_FILE = "reminders.json"
 
@@ -48,91 +50,75 @@ def save_reminders(reminders):
 
 def add_reminder(minutes, message):
 
-    reminders = load_reminders()
+    reminder_time = datetime.now() + timedelta(minutes=minutes)
 
-    reminder = {
+    reminders.insert_one({
+
         "message": message,
-        "time": (
-            datetime.now() +
-            timedelta(minutes=minutes)
-        ).strftime("%Y-%m-%d %H:%M:%S"),
+
+        "time": reminder_time,
+
         "completed": False
-    }
 
-    reminders.append(reminder)
+    })
 
-    save_reminders(reminders)
-
-    print("Reminder saved:", reminder)
 
 
 def get_reminders():
 
-    reminders = load_reminders()
+    data = reminders.find({
 
-    if not reminders:
-        return []
+        "completed": False
+
+    }).sort("time")
 
     result = []
 
-    for i, reminder in enumerate(reminders, start=1):
-
-        status = "Completed" if reminder["completed"] else "Pending"
+    for reminder in data:
 
         result.append(
-            f"{i}. {reminder['message']} - {reminder['time']} ({status})"
+
+            f'{reminder["message"]} - {reminder["time"].strftime("%d-%m-%Y %H:%M")}'
+
         )
 
     return result
 
 def due_reminders():
 
-    reminders = load_reminders()
-
     now = datetime.now()
+
+    data = reminders.find({
+
+        "completed": False,
+
+        "time": {"$lte": now}
+
+    })
 
     due = []
 
-    changed = False
+    for reminder in data:
 
-    for reminder in reminders:
+        due.append(reminder["message"])
 
-        if reminder["completed"]:
-            continue
+        reminders.update_one(
 
-        reminder_time = datetime.strptime(
-            reminder["time"],
-            "%Y-%m-%d %H:%M:%S"
+            {"_id": reminder["_id"]},
+
+            {"$set": {"completed": True}}
+
         )
-
-        if now >= reminder_time:
-
-            due.append(reminder["message"])
-
-            reminder["completed"] = True
-
-            changed = True
-
-    if changed:
-        save_reminders(reminders)
 
     return due
 
 
+def remove_reminder(reminder_id):
 
-def remove_reminder(index):
+    result = reminders.delete_one({
 
-    reminders = load_reminders()
+        "_id": ObjectId(reminder_id)
 
-    pending = [r for r in reminders if not r["completed"]]
+    })
 
-    if index < 1 or index > len(pending):
-        return False
-
-    reminder_to_remove = pending[index - 1]
-
-    reminders.remove(reminder_to_remove)
-
-    save_reminders(reminders)
-
-    return True
+    return result.deleted_count > 0
